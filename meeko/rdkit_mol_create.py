@@ -215,7 +215,11 @@ class RDKitMolCreate:
             else:
                 pose_ids = range(pdbqt_mol._pose_data["n_poses"])
 
-            mol = Chem.MolFromSmiles(smiles)
+            # Keep Hydrogens
+            params = Chem.SmilesParserParams()
+            params.removeHs = False
+
+            mol = Chem.MolFromSmiles(smiles, params)
             mol.SetProp("meeko", json.dumps({"is_sidechain": is_sidechain}))
             coordinates_all_poses = []
             for i in pose_ids:
