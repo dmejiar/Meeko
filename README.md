@@ -1,7 +1,7 @@
 # Meeko: preparation of small molecules for AutoDock
 
 [![API stability](https://img.shields.io/badge/stable%20API-no-orange)](https://shields.io/)
-[![PyPI version fury.io](https://img.shields.io/badge/version-0.5.0-green.svg)](https://pypi.python.org/pypi/ansicolortags/)
+[![PyPI version fury.io](https://img.shields.io/badge/version-0.6.0--alpha.3-green.svg)](https://pypi.python.org/pypi/meeko/)
 
 Meeko reads an RDKit molecule object and writes a PDBQT string (or file)
 for [AutoDock-Vina](https://github.com/ccsb-scripps/AutoDock-Vina)
@@ -33,6 +33,14 @@ and RDKit issues
 [917](https://github.com/rdkit/rdkit/issues/917). So, what could go wrong?
 For example, reading Mol2 files from ZINC
 [led to incorrect net charge of some molecules.](https://github.com/forlilab/Meeko/issues/63)
+
+
+## v0.6.0-alpha.3
+
+This release aims to distribute an enhanced `mk_prepare_receptor.py`.
+Some features are still being developed, hence the `-alpha` suffix in the version.
+Reactive docking is not working in v0.6.0-alpha, but should be restored soon.
+Documentation is also work in progress.
 
 
 ## API changes in v0.5
@@ -68,7 +76,7 @@ mk_prepare_ligand.py -i molecule.sdf --merge_these_atom_types
 * Python (>=3.5)
 * Numpy
 * Scipy
-* RDKit
+* RDKit (>=2023.09)
 * ProDy (optionally, for covalent docking)
 
 Conda or Miniconda can install the dependencies:
@@ -270,6 +278,11 @@ mk_prepare_ligand.py\
     -o prepared.pdbqt
 ```
 
+Prody is required for preparing ligands as flexible sidechains.
+Often, `pip install prody` suffices to install Prody in the currently
+active virtual environment (e.g., conda). For more detailed installation
+instructions visit http://prody.csb.pitt.edu/downloads/.
+
 ## Reactive Docking
 
 ### 1. Prepare protein with waterkit
@@ -332,3 +345,18 @@ The filename to be passed to `--import_dpf` was written by `mk_prepare_receptor.
 and it is suffixed with `reactive_config`.
 ```sh
 ADGPU -I *.reactive_config -L sufex1.pdbqt -N sufex1_docked_ -F *_flex.pdbqt -C 1
+```
+
+## Chorizo docs temporary placeholder
+
+Current init is a builder method designed to parse PDB files and topology
+objects. It is not designed to chorizify a polymer that already exists
+as a single RDKit molecule, or to build a single polymer molecule from the
+individual chorizo residues. To do that, one would have to react residues
+with each other. Padding could be adapted.
+
+
+How bonds between residues are handled and blunt residues, and deleting
+bonds "interactively".
+
+Document residue\_chem\_params.

@@ -21,7 +21,7 @@ def find_files(directory):
 
 setup(
     name="meeko",
-    version='0.5.0',
+    version='0.6.0-alpha.3',
     author="Forli Lab",
     author_email="forli@scripps.edu",
     url="https://github.com/ccsb-scripps/meeko",
@@ -36,7 +36,7 @@ setup(
            #"scripts/mapwater.py",
            #"scripts/wet.py"],
             ],
-    package_data={"meeko" : ["data/*"]},
+    package_data={"meeko" : ["data/*", "data/params/*"]},
     data_files=[("", ["README.md", "LICENSE"]),
                 ("scripts", find_files("scripts"))],
     include_package_data=True,

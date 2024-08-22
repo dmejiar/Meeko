@@ -3,6 +3,7 @@ from meeko import PDBQTMolecule
 from meeko import MoleculePreparation
 from meeko import PDBQTWriterLegacy
 from rdkit import Chem
+import numpy as np
 import pathlib
 import json
 import io
@@ -108,6 +109,9 @@ def test_small_04(): run("small-04.sdf", wet=True)
 def test_meeko_free_energy_prop_vina():
     fpath = datadir/ "vina-result-ethanol.pdbqt"
     pdbqt_mol = PDBQTMolecule.from_file(fpath)
+    ref_charges = [0.034, 0.152, -0.397, 0.21]
+    tolerance = 0.01
+    assert np.all(np.abs(pdbqt_mol.atoms()["partial_charges"] - ref_charges) < tolerance)
     sd_string, failures = RDKitMolCreate.write_sd_string(pdbqt_mol)
     assert len(failures) == 0
     sio = io.BytesIO(sd_string.encode())
@@ -130,3 +134,32 @@ def test_meeko_free_energy_prop_adgpu():
     data = json.loads(rdkit_mols[0].GetProp("meeko"))
     assert "free_energy" in data
     assert data["free_energy"] == -2.11
+
+def test_offsite_charges():
+    mk_config = {
+        "input_offatom_params": {
+            "offsite": [
+                {"smarts": "[#7X3;v3;!+]([*])([*])[*]",
+                 "IDX": [1],
+                 "OFFATOMS": [{"z": [2, 3, 4], "phi": 0, "distance": 0.2, "atype": "LP", "pull_charge_fraction": 1.08}]
+                 }
+            ]
+        }
+    }
+
+    sdfname = "small-01_three-deuterium.sdf"
+    fpath = datadir / sdfname
+    mk_prep = MoleculePreparation.from_config(mk_config)
+    for mol in Chem.SDMolSupplier(str(fpath), removeHs=False):
+        break # we have just 1 mol
+    setups = mk_prep.prepare(mol)
+    molsetup = setups[0]
+    pdbqt, is_ok, error_msg = PDBQTWriterLegacy.write_string(molsetup)
+    assert is_ok
+    assert "LP" in pdbqt
+    pmol = PDBQTMolecule(pdbqt, skip_typing=True)
+    rdkit_mols = RDKitMolCreate.from_pdbqt_mol(pmol)
+    assert len(rdkit_mols) == 1
+    smiles = Chem.MolToSmiles(rdkit_mols[0])
+    assert type(smiles) == str
+    assert len(smiles) > 0
