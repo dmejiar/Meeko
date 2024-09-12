@@ -26,14 +26,6 @@ from .utils.pdbutils import PDBAtomInfo
 from .receptor_pdbqt import PDBQTReceptor
 
 try:
-    from openbabel import openbabel as ob
-    from .utils import obutils
-except ImportError:
-    _has_openbabel = False
-else:
-    _has_openbabel = True
-
-try:
     from misctools import StereoIsomorphism
 except ImportError as _import_misctools_error:
     _has_misctools = False
@@ -166,31 +158,31 @@ class UniqAtomParams:
     def add_molsetup(
         self, molsetup, atom_params=None, add_atomic_nr=False, add_atom_type=False
     ):
-        if "q" in molsetup.atom_params or "atom_type" in molsetup.atom_params:
-            msg = '"q" and "atom_type" found in molsetup.atom_params'
+        if "charge" in molsetup.atom_params or "atom_type" in molsetup.atom_params:
+            msg = '"charge" and "atom_type" found in molsetup.atom_params'
             msg += " but are hard-coded to store molsetup.charge and"
             msg += " molsetup.atom_type in the internal data structure"
             raise RuntimeError(msg)
         if atom_params is None:
             atom_params = molsetup.atom_params
         param_idxs = []
-        for atom_index, ignore in enumerate(molsetup.atom_ignore):
-            if ignore:
+        for atom in molsetup.atoms:
+            if atom.is_ignore:
                 param_idx = None
             else:
-                p = {k: v[atom_index] for (k, v) in molsetup.atom_params.items()}
+                p = {k: v[atom.index] for (k, v) in molsetup.atom_params.items()}
                 if add_atomic_nr:
                     if "atomic_nr" in p:
                         raise RuntimeError(
                             "trying to add atomic_nr but it's already in atom_params"
                         )
-                    p["atomic_nr"] = molsetup.atomic_num[atom_index]
+                    p["atomic_nr"] = atom.atomic_num
                 if add_atom_type:
                     if "atom_type" in p:
                         raise RuntimeError(
                             "trying to add atom_type but it's already in atom_params"
                         )
-                    p["atom_type"] = molsetup.atom_type[atom_index]
+                    p["atom_type"] = atom.atom_type
                 param_idx = self.add_parameter(p)
             param_idxs.append(param_idx)
         return param_idxs
@@ -2107,105 +2099,6 @@ class RDKitMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
             string_to_tuple(v) for v in obj["rmsd_symmetry_indices"]
         ]
         return rdkit_molsetup
-
-
-class OBMoleculeSetup(MoleculeSetup, MoleculeSetupExternalToolkit):
-    """
-    Subclass of MoleculeSetup, used to represent MoleculeSetup objects constructed using OpenBabel.
-
-    Attributes
-    ----------
-    mol :
-        An OpenBabel Mol object to base the OBMoleculeSetup on.
-    """
-
-    def init_atom(self, assign_charges: bool, coords: list = None):
-        """
-        Initializes atoms in the molecule using OpenBabel data.
-
-        Parameters
-        ----------
-        assign_charges: bool
-            Indicates whether charges should be calculated for the atoms in this molecule.
-        coords: list
-            Allows a user to input atom coordinates for the atoms in the molecule.
-
-        Returns
-        -------
-        None
-        """
-        for a in ob.OBMolAtomIter(self.mol):
-            partial_charge = a.GetPartialCharge() * float(assign_charges)
-            self.add_atom(
-                atom_index=a.GetIdx() - 1,
-                pdbinfo=obutils.getPdbInfoNoNull(a),
-                charge=partial_charge,
-                coord=np.asarray(obutils.getAtomCoords(a), dtype="float"),
-                atomic_num=a.GetAtomicNum(),
-                is_ignore=False,
-            )
-
-    def init_bond(self):
-        """
-        Uses the OpenBabel molecule data to initialize bond info for the OBMoleculeSetup
-
-        Returns
-        -------
-        None
-        """
-        for b in ob.OBMolBondIter(self.mol):
-            idx1 = b.GetBeginAtomIdx() - 1
-            idx2 = b.GetEndAtomIdx() - 1
-            rotatable = b.GetBondOrder() == 1
-            self.add_bond(idx1, idx2, rotatable=rotatable)
-
-    def get_mol_name(self):
-        """
-        Gets the mol name from self.mol.
-
-        Returns
-        -------
-        If the mol has a title, returns the title property.
-        """
-        return self.mol.GetTitle()
-
-    def find_pattern(self, smarts: str):
-        """
-        Given a SMARTS pattern, finds substruct matches in the molecule.
-
-        Parameters
-        ----------
-        smarts: str
-            A SMARTS string to find in the OpenBabel molecule.
-
-        Returns
-        -------
-        The substruct matches in the OpenBabel mol for the given SMARTS.
-        """
-        obsmarts = ob.OBSmartsPattern()
-        obsmarts.Init(smarts)
-        found = obsmarts.Match(self.mol)
-        output = []
-        if found:
-            for x in obsmarts.GetUMapList():
-                output.append([y - 1 for y in x])
-        return output
-
-    def get_smiles_and_order(self):
-        raise NotImplementedError
-
-    def get_num_mol_atoms(self):
-        """
-        Gets the number of atoms in the OpenBabel mol.
-
-        Returns
-        -------
-        The number of molecules in the OpenBabel mol.
-        """
-        return self.mol.NumAtoms()
-
-    def get_equivalent_atoms(self):
-        raise NotImplementedError
 
 
 # endregion
